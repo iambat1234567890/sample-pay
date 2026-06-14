@@ -1,0 +1,38 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  imageName: 'sample-pay'
+  dockerRegistryServiceConnection: '<your-azure-service-connection-for-acr>'
+  acrName: '<your-acr-name>.azurecr.io'
+
+steps:
+- task: UseDotNet@2
+  inputs:
+    version: '8.0.x'
+
+- task: Docker@2
+  displayName: Build and push image
+  inputs:
+    command: buildAndPush
+    repository: $(acrName)/$(imageName)
+    dockerfile: Dockerfile
+    containerRegistry: $(dockerRegistryServiceConnection)
+    tags: |
+      $(Build.BuildId)
+
+- task: AzureWebAppContainer@1
+  displayName: Deploy to Azure Web App for Containers
+  inputs:
+    azureSubscription: '$(AzureSubscription)'
+    appName: '$(WebAppName)'
+    imageName: '$(acrName)/$(imageName):$(Build.BuildId)'
+
+# Notes:
+# - Configure a service connection for ACR and set the variables above.
+# - Set `AzureSubscription` and `WebAppName` pipeline variables or library secrets.
